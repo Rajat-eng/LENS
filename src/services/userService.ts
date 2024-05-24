@@ -6,7 +6,7 @@ const create = async (body: ICreateUser) => {
   try {
     const existUser = await UserModel.findOne({ email: body.email });
     if (existUser) {
-      throw new ErrorHandler("User Already exist", 401);
+      throw new ErrorHandler("User Already exist", 409);
     }
     const user = await UserModel.create({ ...body });
 
@@ -18,9 +18,7 @@ const create = async (body: ICreateUser) => {
 
 const login = async (body: ILoginRequest) => {
   try {
-    const user = await UserModel.findOne({ email: body.email }).select(
-      "+password"
-    );
+    const user = await UserModel.findOne({ email: body.email });
     if (!user) {
       throw new ErrorHandler("User Not Found", 404);
     }
@@ -37,7 +35,7 @@ const login = async (body: ILoginRequest) => {
 
 const getUserById = async (id: string) => {
   try {
-    const user = await UserModel.findById(id);
+    const user = await UserModel.findById(id).select("-password").exec();
     return user;
   } catch (error: any) {
     throw new ErrorHandler(error.message, error.statusCode);

@@ -7,6 +7,7 @@ import { connectDB } from "./utils/db";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 dotenv.config();
+
 const app: Express = express();
 
 app.use(express.json({ limit: "50mb" }));
@@ -34,7 +35,10 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use("/api/v1", mainRouter);
 app.use(ErrorMiddleware);
+
 app.listen(port, () => {
   connectDB();
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
+
+export default app;
