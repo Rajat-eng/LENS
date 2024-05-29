@@ -1,10 +1,15 @@
-import { model, Model, Schema } from "mongoose";
+import { model, Model, Schema, Document } from "mongoose";
 import { IUser } from "../entity/User.entity";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 require("dotenv").config();
 
-const UserSchema = new Schema<IUser>(
+export interface UserDocument extends IUser, Document {
+  comparePasword: (password: string) => Promise<boolean>;
+  signAccessToken: () => string;
+}
+
+const UserSchema = new Schema<UserDocument>(
   {
     name: { type: String, required: true },
     email: { type: String, required: true },
@@ -12,7 +17,7 @@ const UserSchema = new Schema<IUser>(
   },
   { collection: "User", timestamps: true }
 );
-UserSchema.pre<IUser>("save", async function (next) {
+UserSchema.pre<UserDocument>("save", async function (next) {
   if (!this.isModified("password")) {
     next();
   }
@@ -32,4 +37,4 @@ UserSchema.methods.signAccessToken = function (): string {
   });
 };
 
-export const UserModel: Model<IUser> = model("User", UserSchema);
+export const UserModel: Model<UserDocument> = model("User", UserSchema);

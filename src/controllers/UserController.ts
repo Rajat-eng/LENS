@@ -3,18 +3,19 @@ import { CatchAsyncError } from "../middleware/catchAsyncErrors.middleare";
 import { UserService } from "../services/userService";
 import { ErrorHandler } from "../utils/ErrorHandler";
 
-const create = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
+const create = async (req: Request, res: Response, next: NextFunction) => {
+  try {
     const user = await UserService.create(req.body);
     return res.status(201).json({ success: true, data: user });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, error.statusCode));
   }
-);
+};
 
-const login = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const user = await UserService.login(req.body);
+const login = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const access_token = await UserService.login(req.body);
 
-    const access_token = user.signAccessToken();
     const accessTokenExpire = parseInt(
       process.env.ACCESS_TOKEN_EXPIRE || "",
       10
@@ -29,27 +30,31 @@ const login = CatchAsyncError(
     return res.status(200).json({
       success: true,
       data: access_token,
-      message: "Logged in successFully",
+      message: "Logged in successfully",
     });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, error.statusCode));
   }
-);
+};
 
-const getUser = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
+const getUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
     const user = await UserService.getUserById(req.user);
     return res.status(200).json({
       success: true,
       data: user,
     });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, error.statusCode));
   }
-);
+};
 
 const logoutUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     res.clearCookie("token");
     return res.status(200).json({
       success: true,
-      message: "Logged ot successfully",
+      message: "Logged oot successfully",
     });
   }
 );

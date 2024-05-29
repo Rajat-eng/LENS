@@ -108,10 +108,9 @@ import { Document } from "mongoose";
  *              type: string
  *              default: Logged out successfully
  */
-export interface IUser extends Document {
+
+export interface IUser {
   name: string;
   email: string;
   password: string;
-  comparePasword: (password: string) => Promise<boolean>;
-  signAccessToken: () => string;
 }

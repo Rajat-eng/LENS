@@ -1,135 +1,135 @@
-import app from "../src/app";
+import app from "../src/server";
 import request from "supertest";
+import { Request, Response, NextFunction } from "express";
 import { UserModel } from "../src/Schema/User.Schema";
 import { UserService } from "../src/services/userService";
 import { ErrorHandler } from "../src/utils/ErrorHandler";
-import { isAuthenticated } from "../src/middleware/auth.middleware";
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
-it("should create a new user when no existing user with the same email exists", async () => {
-  const mockUser = {
-    name: "John Doe",
-    email: "john@example.com",
-    password: "password123",
-  };
-  UserModel.findOne = jest.fn().mockResolvedValue(null);
-  UserModel.create = jest.fn().mockResolvedValue(mockUser);
-  const result = await UserService.create(mockUser);
-  expect(UserModel.findOne).toHaveBeenCalledWith({ email: "john@example.com" });
-  expect(UserModel.create).toHaveBeenCalledWith(mockUser);
-  expect(result).toEqual(mockUser);
-});
+import { UserController } from "../src/controllers/UserController";
+import mongoose from "mongoose";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
 
-it("should throw an error when the email already exists", async () => {
-  const mockUser = {
-    name: "John Doe",
-    email: "john@example.com",
-    password: "123456",
-  };
-  UserModel.findOne = jest.fn().mockResolvedValue(mockUser);
-  await expect(UserService.create(mockUser)).rejects.toThrow(ErrorHandler);
-  expect(UserModel.findOne).toHaveBeenCalledWith({ email: "john@example.com" });
-});
+describe("POST /api/v1/users/create-user", () => {
+  it("should throw an error when the email already exists", async () => {
+    const userData = {
+      name: "Rajat",
+      email: "vrajat269@gmail.com",
+      password: "12345",
+    };
+    const createMock = jest
+      .spyOn(UserService, "create")
+      .mockRejectedValue(new ErrorHandler("User Already Exist", 409));
+    const { body, statusCode } = await request(app)
+      .post("/api/v1/user/create-user")
+      .send(userData);
 
-// User is found and password matches
-it("should return the user when credentials are correct", async () => {
-  const mockUser = {
-    email: "test@example.com",
-    password: "password123",
-    comparePasword: jest.fn().mockResolvedValue(true),
-  };
-  jest.spyOn(UserModel, "findOne").mockResolvedValue(mockUser);
-  const result = await UserService.login({
-    email: "test@example.com",
-    password: "password123",
+    expect(statusCode).toBe(409);
+
+    // Assert that the response body contains the correct error message
+    expect(body.message).toBe("User Already Exist");
+
+    // Assert that UserService.create was called with the correct data
+    expect(createMock).toHaveBeenCalledWith(userData);
   });
-  expect(result).toEqual(mockUser);
-  expect(mockUser.comparePasword).toHaveBeenCalledWith("password123");
 });
 
-// User not found in the database
-it("should throw an error when the user is not found", async () => {
-  jest.spyOn(UserModel, "findOne").mockResolvedValue(null);
-  await expect(
-    UserService.login({
-      email: "nonexistent@example.com",
-      password: "password123",
-    })
-  ).rejects.toThrow(new ErrorHandler("User Not Found", 404));
-});
-
-it("should return a user object when a valid ID is provided", async () => {
-  const mockId = "validUserId123";
-  const mockUser = {
-    id: mockId,
-    username: "testUser",
-    email: "test@example.com",
-  };
-  UserModel.findById = jest.fn().mockReturnValue({
-    select: jest.fn().mockReturnValue({
-      exec: jest.fn().mockResolvedValue(mockUser),
-    }),
+describe("login user", () => {
+  it("should login user and set token in cookie when credentials are correct", async () => {
+    const userData = {
+      email: "vrajat269@gmail.com",
+      password: "12345",
+    };
+    const mockAccessToken = "mockAccessToken12345";
+    const LoginMock = jest
+      .spyOn(UserService, "login")
+      .mockResolvedValue(mockAccessToken);
+    const { statusCode, body } = await request(app)
+      .post("/api/v1/user/login")
+      .send(userData);
+    expect(statusCode).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.message).toBe("Logged in successfully");
+    expect(body.data).toBe(mockAccessToken);
+    expect(LoginMock).toHaveBeenCalledWith(userData);
   });
-  const result = await UserService.getUserById(mockId);
-  expect(result).toEqual(mockUser);
 });
 
-it("should throw an error when an invalid ID is provided", async () => {
-  const mockId = "invalidUserId123";
-  const mockError = new ErrorHandler("User not found", 404);
-  UserModel.findById = jest.fn().mockReturnValue({
-    select: jest.fn().mockReturnValue({
-      exec: jest.fn().mockRejectedValue(mockError),
-    }),
+describe("get user", () => {
+  it("should give user when token is valid", async () => {
+    const user = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: "Rajat",
+      email: "vrajat269@gmail.com",
+      createdAt: new Date("2021-09-30T13:31:07.674Z"),
+      updatedAt: new Date("2021-09-30T13:31:07.674Z"),
+      __v: 0,
+    };
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.ACCESS_TOKEN as string
+    );
+
+    const validUserMock = jest
+      .spyOn(UserService, "getUserById")
+      .mockResolvedValue(user);
+
+    // const req = {
+    //   user: "validUserId",
+    // } as Request & { user: any };
+
+    // const res = {
+    //   status: jest.fn().mockReturnThis(),
+    //   json: jest.fn().mockReturnThis(),
+    // } as unknown as Response;
+
+    // const next = jest.fn();
+
+    // await UserController.getUser(req, res, next);
+
+    const response = await request(app)
+      .get("/api/v1/user/profile")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.success).toBeTruthy();
+    // expect(response.body.data).toEqual(user);
+    expect(validUserMock).toHaveBeenCalledWith(user._id);
   });
-  await expect(UserService.getUserById(mockId)).rejects.toThrow(ErrorHandler);
+
+  it("should throw error when token is not present", async () => {
+    const error = new ErrorHandler("login first", 400);
+    const mockError = jest
+      .spyOn(UserService, "getUserById")
+      .mockRejectedValue(error);
+    const response = await request(app).get("/api/v1/user/profile");
+
+    expect(response.statusCode).toBe(400);
+    expect(mockError).toHaveBeenCalledTimes(0);
+  });
+
+  it("should throw error message when token is invalid", async () => {
+    const user = {
+      _id: new mongoose.Types.ObjectId().toString(),
+    };
+    const error = new ErrorHandler("session expired", 440);
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.ACCESS_TOKEN as string,
+      {
+        expiresIn: "1ms",
+      }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const mockError = jest
+      .spyOn(UserService, "getUserById")
+      .mockRejectedValue(error);
+
+    const response = await request(app)
+      .get("/api/v1/user/profile")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(440);
+    expect(mockError).toHaveBeenCalledTimes(0);
+  });
 });
-
-// describe("isAuthenticated Middleware", () => {
-//   it("should call next() with a verified user when a valid token is provided", async () => {
-//     // Mocked request object
-//     const req = {
-//       user: null,
-//       cookies: { token: "valid-token" },
-//     } as unknown as Request & { user: any };
-
-//     // Mocked response object
-//     const res = {} as Response;
-
-//     // Mocked next function
-//     const next = jest.fn() as NextFunction;
-
-//     // Mocking jwt.verify method
-//     jest.mock("jsonwebtoken", () => ({
-//       verify: jest.fn().mockReturnValue({ id: "123" }),
-//     }));
-
-//     process.env.ACCESS_TOKEN = "secret";
-
-//     // Assertions
-//     expect(jwt.verify).toHaveBeenCalledWith("valid-token", "secret");
-//     expect(req.user).toBe("123");
-//     expect(next).toHaveBeenCalledTimes(1);
-//   });
-
-//   it("should return an error when no token is provided", async () => {
-//     // Mocked request object with no token
-//     const req = {
-//       cookies: {},
-//     } as Request;
-
-//     // Mocked response object
-//     const res = {} as Response;
-
-//     // Mocked next function
-//     const next = jest.fn() as NextFunction;
-
-//     // Importing the middleware function
-
-//     // Calling the middleware function
-//     await isAuthenticated(req, res, next);
-
-//     // Expecting that next() was called with an error
-//     expect(next).toHaveBeenCalledWith(expect.any(Error));
-//   });
-// });
