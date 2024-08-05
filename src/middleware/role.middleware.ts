@@ -5,7 +5,7 @@ export const checkPermission = (permission: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { role } = req.user;
     const permissions = new Role().getPermissionsRoleByName(role);
-    console.log(role, permissions);
+
     if (!permissions.includes(permission)) {
       return next(
         new ErrorHandler("You are not allowed to access this resource", 403)
