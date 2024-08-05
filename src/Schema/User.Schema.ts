@@ -14,9 +14,12 @@ const UserSchema = new Schema<UserDocument>(
     name: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String, required: true },
+    role: { type: String, default: "User", enum: ["Admin", "Manager", "User"] },
+    manager: { type: Schema.Types.ObjectId, ref: "user" },
   },
   { collection: "User", timestamps: true }
 );
+
 UserSchema.pre<UserDocument>("save", async function (next) {
   if (!this.isModified("password")) {
     next();
@@ -32,9 +35,13 @@ UserSchema.methods.comparePasword = async function (
 };
 
 UserSchema.methods.signAccessToken = function (): string {
-  return jwt.sign({ id: this._id }, process.env.ACCESS_TOKEN || "", {
-    expiresIn: 60 * 60,
-  });
+  return jwt.sign(
+    { id: this._id, role: this.role },
+    process.env.ACCESS_TOKEN || "",
+    {
+      expiresIn: 60 * 60,
+    }
+  );
 };
 
 export const UserModel: Model<UserDocument> = model("User", UserSchema);

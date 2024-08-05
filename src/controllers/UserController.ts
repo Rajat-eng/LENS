@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { CatchAsyncError } from "../middleware/catchAsyncErrors.middleare";
 import { UserService } from "../services/userService";
 import { ErrorHandler } from "../utils/ErrorHandler";
 
@@ -39,7 +38,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
 const getUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await UserService.getUserById(req.user);
+    const user = await UserService.getUserById(req.user.id);
     return res.status(200).json({
       success: true,
       data: user,
@@ -49,14 +48,16 @@ const getUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-const logoutUser = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
+const logoutUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
     res.clearCookie("token");
     return res.status(200).json({
       success: true,
       message: "Logged oot successfully",
     });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, error.statusCode));
   }
-);
+};
 
 export const UserController = { create, login, getUser, logoutUser };

@@ -113,4 +113,6 @@ export interface IUser {
   name: string;
   email: string;
   password: string;
+  role: String;
+  manager: String;
 }

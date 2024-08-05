@@ -1,6 +1,5 @@
 import { ICreateUser, ILoginRequest } from "../Interfaces/User/user.interface";
 import { UserDocument, UserModel } from "../Schema/User.Schema";
-import { IUser } from "../entity/User.entity";
 import { ErrorHandler } from "../utils/ErrorHandler";
 import { omit } from "lodash";
 const create = async (body: ICreateUser) => {
@@ -38,7 +37,9 @@ const login = async (body: ILoginRequest): Promise<string> => {
   }
 };
 
-const getUserById = async (id: string): Promise<any | null | undefined> => {
+const getUserById = async (
+  id: string
+): Promise<Omit<UserDocument, "password"> | null> => {
   try {
     const user = await UserModel.findById(id);
     if (!user) {
@@ -50,4 +51,11 @@ const getUserById = async (id: string): Promise<any | null | undefined> => {
   }
 };
 
-export const UserService = { create, login, getUserById };
+const updateUser = async (id: string) => {
+  const user = await UserModel.findByIdAndUpdate(id, {
+    $set: {
+      manager: "ads",
+    },
+  });
+};
+export const UserService = { create, login, getUserById, updateUser };

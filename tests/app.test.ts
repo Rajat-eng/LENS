@@ -17,17 +17,20 @@ describe("POST /api/v1/users/create-user", () => {
       email: "vrajat269@gmail.com",
       password: "12345",
     };
+
     const createMock = jest
       .spyOn(UserService, "create")
       .mockRejectedValue(new ErrorHandler("User Already Exist", 409));
-    const { body, statusCode } = await request(app)
-      .post("/api/v1/user/create-user")
+
+    const response = await request(app)
+      .post("/api/v1/user/create")
       .send(userData);
 
-    expect(statusCode).toBe(409);
+    // Assert that the status code is 409
+    expect(response.statusCode).toBe(409);
 
     // Assert that the response body contains the correct error message
-    expect(body.message).toBe("User Already Exist");
+    expect(response.body.message).toBe("User Already Exist");
 
     // Assert that UserService.create was called with the correct data
     expect(createMock).toHaveBeenCalledWith(userData);
@@ -63,8 +66,9 @@ describe("get user", () => {
       email: "vrajat269@gmail.com",
       createdAt: new Date("2021-09-30T13:31:07.674Z"),
       updatedAt: new Date("2021-09-30T13:31:07.674Z"),
-      __v: 0,
+      role: "Admin",
     };
+
     const token = jwt.sign(
       { id: user._id },
       process.env.ACCESS_TOKEN as string

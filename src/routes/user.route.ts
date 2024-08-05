@@ -2,7 +2,7 @@ import express from "express";
 import { UserController } from "../controllers/UserController";
 import { createUserValidator } from "../middleware/user-validator.middleware";
 import { isAuthenticated } from "../middleware/auth.middleware";
-
+import { rateLimiter } from "../services/rateLimiter";
 const userRouter = express.Router();
 
 /**
@@ -26,7 +26,12 @@ const userRouter = express.Router();
  *            schema:
  *              $ref: '#/components/schemas/CreateUserResponse'
  */
-userRouter.post("/create-user", createUserValidator, UserController.create);
+userRouter.post(
+  "/create",
+
+  createUserValidator,
+  UserController.create
+);
 
 /**
  * @openapi
@@ -55,7 +60,17 @@ userRouter.post("/create-user", createUserValidator, UserController.create);
  *            schema:
  *              $ref: '#/components/schemas/LoginErrorResponse'
  */
-userRouter.post("/login", UserController.login);
+userRouter.post(
+  "/login",
+  rateLimiter({
+    endpoint: "USER_LOGIN",
+    rate_limit: {
+      time: 60,
+      limit: 3,
+    },
+  }),
+  UserController.login
+);
 /**
  * @openapi
  * '/api/users/profile':

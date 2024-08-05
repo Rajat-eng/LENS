@@ -18,10 +18,10 @@ export const isAuthenticated = async (
       token,
       process.env.ACCESS_TOKEN as string
     ) as JwtPayload;
-    console.log("verify", verifyUser);
-    req.user = verifyUser.id;
+    req.user = verifyUser;
     next();
   } catch (error: any) {
+    console.log(error);
     if (error.name === "TokenExpiredError") {
       return next(new ErrorHandler("Session expired", 440));
     } else if (error.name === "JsonWebTokenError") {
